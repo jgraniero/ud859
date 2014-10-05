@@ -3,6 +3,13 @@ package com.google.devrel.training.conference.spi;
 import static com.google.devrel.training.conference.service.OfyService.factory;
 import static com.google.devrel.training.conference.service.OfyService.ofy;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.logging.Logger;
+
+import javax.inject.Named;
+
 import com.google.api.server.spi.config.Api;
 import com.google.api.server.spi.config.ApiMethod;
 import com.google.api.server.spi.config.ApiMethod.HttpMethod;
@@ -21,6 +28,7 @@ import com.google.devrel.training.conference.domain.Announcement;
 import com.google.devrel.training.conference.domain.AppEngineUser;
 import com.google.devrel.training.conference.domain.Conference;
 import com.google.devrel.training.conference.domain.Profile;
+import com.google.devrel.training.conference.domain.Session;
 import com.google.devrel.training.conference.form.ConferenceForm;
 import com.google.devrel.training.conference.form.ConferenceQueryForm;
 import com.google.devrel.training.conference.form.ProfileForm;
@@ -28,13 +36,6 @@ import com.google.devrel.training.conference.form.ProfileForm.TeeShirtSize;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.Work;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.logging.Logger;
-
-import javax.inject.Named;
 
 /**
  * Defines conference APIs.
@@ -525,5 +526,45 @@ public class ConferenceApi {
         });
         // NotFoundException is actually thrown here.
         return new WrappedBoolean(result.getResult());
+    }
+    
+    @ApiMethod(
+            name = "getConferenceSessions",
+            path = "getConferenceSessions",
+            httpMethod = HttpMethod.GET
+    )
+    public Collection<Session> getConferenceSessions(
+    		@Named("websafeConferenceKey") final String websafeConferenceKey) 
+    	   throws NotFoundException {
+
+    	Conference conference = getConference(websafeConferenceKey);
+    	List<String> sessionKeysInConference = conference.getSessionKeysInConference();
+    	List<Key<Session>> sessionsInConference = new ArrayList<>();
+    	for (String keyString : sessionKeysInConference) {
+    		sessionsInConference.add(Key.<Session>create(keyString));
+    	}
+    	
+    	return ofy().load().keys(sessionsInConference).values();
+    }
+    
+    @ApiMethod(
+    		name = "getConferenceSessionsByType",
+    		path = "getConferenceSessionsByType",
+    		httpMethod = HttpMethod.GET
+    )
+    public Collection<Session> getConferenceSessionsByType(
+    		@Named("websafeConferenceKey") final String websafeConferenceKey,
+    		final String typeOfSession)
+    		throws NotFoundException {
+    	
+    	Collection<Session> conferenceSessions = getConferenceSessions(websafeConferenceKey);
+    	Collection<Session> sessionsOfType = new ArrayList<>();
+    	for (Session session : conferenceSessions) {
+    		if (session.getFormat().equalsIgnoreCase(typeOfSession)) {
+    			sessionsOfType.add(session);
+    		}
+    	}
+    	
+    	return sessionsOfType;
     }
 }
