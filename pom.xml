@@ -106,6 +106,13 @@
 	                <configuration>
 	                    <enableJarClasses>false</enableJarClasses>
 	                </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>endpoints_get_discovery_doc</goal>
+                            </goals>
+                        </execution>
+                    </executions>
 	            </plugin>
 	        </plugins>
     </build>
