@@ -1,9 +1,14 @@
 package com.google.devrel.training.conference.domain;
 
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
+import com.google.devrel.training.conference.form.SessionForm;
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Parent;
 
 /**
  * Stores a conference's session information
@@ -18,32 +23,71 @@ public class Session {
 	private Long id;
 	
 	/**
-	 * The start time for the session
+	 * Title for the session
 	 */
-	private Date startTime;
+	private String name;
 	
 	/**
-	 * Duration in number of minutes
+	 * The date/time the session starts
 	 */
-	private Integer duration;
+	private Date startDate;
 	
 	/**
-	 * Format of the session (workshop, letcture, etc.)
+	 * The date/time the session ends
+	 */
+	private Date endDate;
+	
+	/**
+	 * Format of the session (workshop, lecture, etc.)
 	 */
 	// TODO immutable list of possible formats
-	private String format;
+	private String typeOfSession;
+	
+	@Parent
+	private Key<Conference> conferenceKey;
+	
+	/**
+	 * List of speakers for the session
+	 */
+	private Set<String> speakers = new HashSet<>();
 	
 	/**
 	 * Location of the session
 	 */
 	private String location;
 	
-	// todo
-	public Session() {
-		
+	/**
+	 * I haven't the slightest idea what this is or what data type it's supposed to be.
+	 */
+	private Set<String> highlights;
+	
+	private Session() {}
+	
+	public Session(final long id, final Key<Conference> conferenceKey, final SessionForm sessionForm) {
+		// precondition checks?  see Conference.java
+		this.id = id;
+		this.conferenceKey = conferenceKey;
+		updateWithSessionForm(sessionForm);
 	}
 	
-	public String getFormat() {
-		return format;
+	public void updateWithSessionForm(SessionForm sessionForm) {
+		name = sessionForm.getName();
+		startDate = sessionForm.getStartDate();
+		endDate = sessionForm.getEndDate();
+		typeOfSession = sessionForm.getTypeOfSession();
+		speakers = sessionForm.getSpeakers();
+		location = sessionForm.getLocation();
+		highlights = sessionForm.getHighlights();
+	}
+
+	/**
+	 * @return duration of the session in seconds
+	 */
+	public long getDuration() {
+		return (endDate.getTime() - startDate.getTime()) / 1000;
+	}
+	
+	public String getTypeOfSession() {
+		return typeOfSession;
 	}
 }

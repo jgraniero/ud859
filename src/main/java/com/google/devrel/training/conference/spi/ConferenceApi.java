@@ -33,6 +33,7 @@ import com.google.devrel.training.conference.form.ConferenceForm;
 import com.google.devrel.training.conference.form.ConferenceQueryForm;
 import com.google.devrel.training.conference.form.ProfileForm;
 import com.google.devrel.training.conference.form.ProfileForm.TeeShirtSize;
+import com.google.devrel.training.conference.form.SessionForm;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.Work;
@@ -554,7 +555,7 @@ public class ConferenceApi {
     )
     public Collection<Session> getConferenceSessionsByType(
     		@Named("websafeConferenceKey") final String websafeConferenceKey,
-    		final String typeOfSession)
+    		@Named("typeOfSession") final String typeOfSession)
     		throws NotFoundException {
     	
     	Collection<Session> conferenceSessions = getConferenceSessions(websafeConferenceKey);
@@ -566,5 +567,76 @@ public class ConferenceApi {
     	}
     	
     	return sessionsOfType;
+    }
+    
+    @ApiMethod(
+    		name = "getSessionsBySpeaker",
+    		path = "getSessionsBySpeaker",
+    		httpMethod = HttpMethod.GET
+    )
+    public List<Session> getSessionsBySpeaker(@Named("speaker") String speaker) {
+    	return ofy().load().type(Session.class).filter("speaker =", speaker).list();
+    }
+    
+    @ApiMethod(
+    		name = "createSession",
+    		path = "session",
+    		httpMethod = HttpMethod.PUT
+    )
+    public Session createSession(User user, final SessionForm sessionForm, 
+    		@Named("websafeConferenceKey") final String websafeConferenceKey) 
+    		throws UnauthorizedException, NotFoundException {
+//        // Allocate Id first, in order to make the transaction idempotent.
+//        Key<Profile> profileKey = Key.create(Profile.class, getUserId(user));
+//        final Key<Conference> conferenceKey = factory().allocateId(profileKey, Conference.class);
+//        final long conferenceId = conferenceKey.getId();
+//        final Queue queue = QueueFactory.getDefaultQueue();
+//        final String userId = getUserId(user);
+//        // Start a transaction.
+//        Conference conference = ofy().transact(new Work<Conference>() {
+//            @Override
+//            public Conference run() {
+//                // Fetch user's Profile.
+//                Profile profile = getProfileFromUser(user, userId);
+//                Conference conference = new Conference(conferenceId, userId, conferenceForm);
+//                // Save Conference and Profile.
+//                ofy().save().entities(conference, profile).now();
+//                queue.add(ofy().getTransaction(),
+//                        TaskOptions.Builder.withUrl("/tasks/send_confirmation_email")
+//                        .param("email", profile.getMainEmail())
+//                        .param("conferenceInfo", conference.toString()));
+//                return conference;
+//            }
+//        });
+//        return conference;
+        if (user == null) {
+            throw new UnauthorizedException("Authorization required");
+        }   	
+        
+        final Key<Conference> conferenceKey = Key.create(websafeConferenceKey);
+        final long conferenceId = conferenceKey.getId();
+        Key<Session> sessionKey = factory().allocateId(conferenceKey, Session.class);
+        final long sessionId = sessionKey.getId();
+        Session session = ofy().transact(new Work<Session>(){
+        	@Override
+        	public Session run() {
+        		Session session = new Session(sessionId, conferenceKey, sessionForm);
+        		Conference conference = null;
+        		try {
+        			getConference(websafeConferenceKey);
+        		} catch (NotFoundException e) {
+        			return null;
+        		}
+        		ofy().save().entities(session, conference).now();
+        		// todo confirmation email
+        		return session;
+        	}
+        });
+        
+        if (session == null) {
+        	throw new NotFoundException("Conference not found");
+        }
+
+        return session;
     }
 }

@@ -1,6 +1,7 @@
 package com.google.devrel.training.conference.form;
 
 import java.util.Date;
+import java.util.Set;
 
 public class SessionForm {
 
@@ -12,17 +13,12 @@ public class SessionForm {
 	/**
 	 * Conference highlights
 	 */
-	private String highlights;
+	private Set<String> highlights;
 	
 	/**
 	 * Session speaker
 	 */
-	private String speaker;
-	
-	/**
-	 * Duration of the session in minutes
-	 */
-	private int duration;
+	private Set<String> speakers;
 	
 	/**
 	 * The type of the session (workshop, q&a, etc.)
@@ -30,50 +26,63 @@ public class SessionForm {
 	private String typeOfSession;
 	
 	/**
-	 * The session date
+	 * The session start date/time
 	 */
-	private Date date;
+	private Date startDate;
 	
 	/**
-	 * The start time of the session
+	 * The sesseion end date/time
 	 */
-	private Date startTime;
+	private Date endDate;
 	
-	public SessionForm(String name, String highlights, String speaker, int duration,
-			String typeOfSession, Date date) {
+	/**
+	 * The location of the session
+	 */
+	// TODO this should probably default to the location of the conference
+	private String location;
+	
+	public SessionForm(
+			String name, 
+			Set<String> highlights, 
+			Set<String> speakers, 
+			String typeOfSession, 
+			Date startDate, 
+			Date endDate) {
 		this.name = name;
 		this.highlights = highlights;
-		this.speaker = speaker;
-		this.duration = duration;
+		this.speakers = speakers;
 		this.typeOfSession = typeOfSession;
-		this.date = date;
+		this.startDate = startDate;
+		this.endDate = endDate;
 	}
 	
 	public String getName() {
 		return name;
 	}
 	
-	public String getHighlights() {
+	public Set<String> getHighlights() {
 		return highlights;
 	}
 	
-	public String getSpeaker() {
-		return speaker;
+	public Set<String> getSpeakers() {
+		return speakers;
 	}
 	
-	public int getDuration() {
-		return duration;
-	}
+
 	
 	public String getTypeOfSession() {
 		return typeOfSession;
 	}
 	
-	public Date getDate() {
-		return date;
+	public Date getStartDate() {
+		return startDate;
 	}
 	
-	public Date getStartTime() {
-		return startTime;
+	public Date getEndDate() {
+		return endDate;
+	}
+	
+	public String getLocation() {
+		return location;
 	}
 }
