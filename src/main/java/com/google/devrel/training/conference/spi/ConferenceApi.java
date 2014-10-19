@@ -539,14 +539,10 @@ public class ConferenceApi {
     		@Named("websafeConferenceKey") final String websafeConferenceKey) 
     	   throws NotFoundException {
 
-    	Conference conference = getConference(websafeConferenceKey);
-    	List<String> sessionKeysInConference = conference.getSessionKeysInConference();
-    	List<Key<Session>> sessionsInConference = new ArrayList<>();
-    	for (String keyString : sessionKeysInConference) {
-    		sessionsInConference.add(Key.<Session>create(keyString));
-    	}
-    	
-    	return ofy().load().keys(sessionsInConference).values();
+    	Key<Conference> conferenceKey = Key.create(websafeConferenceKey);
+    	return ofy().load().type(Session.class)
+    			           .ancestor(conferenceKey)
+    			           .list();
     }
     
     @ApiMethod(
@@ -554,20 +550,17 @@ public class ConferenceApi {
     		path = "getConferenceSessionsByType",
     		httpMethod = HttpMethod.GET
     )
-    public Collection<Session> getConferenceSessionsByType(
+    public List<Session> getConferenceSessionsByType(
     		@Named("websafeConferenceKey") final String websafeConferenceKey,
     		@Named("typeOfSession") final String typeOfSession)
     		throws NotFoundException {
     	
-    	Collection<Session> conferenceSessions = getConferenceSessions(websafeConferenceKey);
-    	Collection<Session> sessionsOfType = new ArrayList<>();
-    	for (Session session : conferenceSessions) {
-    		if (session.getTypeOfSession().equalsIgnoreCase(typeOfSession)) {
-    			sessionsOfType.add(session);
-    		}
-    	}
-    	
-    	return sessionsOfType;
+    	Key<Conference> conferenceKey = Key.create(websafeConferenceKey);
+    	return ofy().load().type(Session.class)
+       	                   .ancestor(conferenceKey)
+       	                   .filter("typeOfSession =", typeOfSession)
+       	                   .order("startDate")
+       	                   .list();
     }
     
     @ApiMethod(
@@ -587,29 +580,6 @@ public class ConferenceApi {
     public Session createSession(User user, final SessionForm sessionForm, 
     		@Named("websafeConferenceKey") final String websafeConferenceKey) 
     		throws UnauthorizedException, NotFoundException, BadRequestException {
-//        // Allocate Id first, in order to make the transaction idempotent.
-//        Key<Profile> profileKey = Key.create(Profile.class, getUserId(user));
-//        final Key<Conference> conferenceKey = factory().allocateId(profileKey, Conference.class);
-//        final long conferenceId = conferenceKey.getId();
-//        final Queue queue = QueueFactory.getDefaultQueue();
-//        final String userId = getUserId(user);
-//        // Start a transaction.
-//        Conference conference = ofy().transact(new Work<Conference>() {
-//            @Override
-//            public Conference run() {
-//                // Fetch user's Profile.
-//                Profile profile = getProfileFromUser(user, userId);
-//                Conference conference = new Conference(conferenceId, userId, conferenceForm);
-//                // Save Conference and Profile.
-//                ofy().save().entities(conference, profile).now();
-//                queue.add(ofy().getTransaction(),
-//                        TaskOptions.Builder.withUrl("/tasks/send_confirmation_email")
-//                        .param("email", profile.getMainEmail())
-//                        .param("conferenceInfo", conference.toString()));
-//                return conference;
-//            }
-//        });
-//        return conference;
         if (user == null) {
             throw new UnauthorizedException("Authorization required");
         }   	

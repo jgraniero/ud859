@@ -10,6 +10,7 @@ import com.google.devrel.training.conference.form.SessionForm;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.annotation.Parent;
 
 /**
@@ -43,6 +44,7 @@ public class Session {
 	 * Format of the session (workshop, lecture, etc.)
 	 */
 	// TODO immutable list of possible formats
+	@Index
 	private String typeOfSession;
 	
 	@Parent
