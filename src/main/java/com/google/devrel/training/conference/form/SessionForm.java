@@ -41,12 +41,14 @@ public class SessionForm {
 	// TODO this should probably default to the location of the conference
 	private String location;
 	
+	private SessionForm() {}
+	
 	public SessionForm(
 			String name, 
 			Set<String> highlights, 
 			Set<String> speakers, 
 			String typeOfSession, 
-			Date startDate, 
+			Date startDate,
 			Date endDate) {
 		this.name = name;
 		this.highlights = highlights;
@@ -67,8 +69,6 @@ public class SessionForm {
 	public Set<String> getSpeakers() {
 		return speakers;
 	}
-	
-
 	
 	public String getTypeOfSession() {
 		return typeOfSession;

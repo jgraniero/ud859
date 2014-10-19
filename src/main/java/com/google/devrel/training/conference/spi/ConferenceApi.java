@@ -13,6 +13,7 @@ import javax.inject.Named;
 import com.google.api.server.spi.config.Api;
 import com.google.api.server.spi.config.ApiMethod;
 import com.google.api.server.spi.config.ApiMethod.HttpMethod;
+import com.google.api.server.spi.response.BadRequestException;
 import com.google.api.server.spi.response.ConflictException;
 import com.google.api.server.spi.response.ForbiddenException;
 import com.google.api.server.spi.response.NotFoundException;
@@ -561,7 +562,7 @@ public class ConferenceApi {
     	Collection<Session> conferenceSessions = getConferenceSessions(websafeConferenceKey);
     	Collection<Session> sessionsOfType = new ArrayList<>();
     	for (Session session : conferenceSessions) {
-    		if (session.getFormat().equalsIgnoreCase(typeOfSession)) {
+    		if (session.getTypeOfSession().equalsIgnoreCase(typeOfSession)) {
     			sessionsOfType.add(session);
     		}
     	}
@@ -585,7 +586,7 @@ public class ConferenceApi {
     )
     public Session createSession(User user, final SessionForm sessionForm, 
     		@Named("websafeConferenceKey") final String websafeConferenceKey) 
-    		throws UnauthorizedException, NotFoundException {
+    		throws UnauthorizedException, NotFoundException, BadRequestException {
 //        // Allocate Id first, in order to make the transaction idempotent.
 //        Key<Profile> profileKey = Key.create(Profile.class, getUserId(user));
 //        final Key<Conference> conferenceKey = factory().allocateId(profileKey, Conference.class);
@@ -613,30 +614,32 @@ public class ConferenceApi {
             throw new UnauthorizedException("Authorization required");
         }   	
         
+        // ensure that session start time is less than end time
+        if (sessionForm.getStartDate().compareTo(sessionForm.getEndDate()) > 0) {
+        	throw new BadRequestException("Session start time must be before its end time");
+        }
+
+        // get the conference and check that the session is in fact contained with in it
+        final Conference conference = getConference(websafeConferenceKey);
+        if (sessionForm.getStartDate().compareTo(conference.getStartDate()) < 0 ||
+            sessionForm.getEndDate().compareTo(conference.getEndDate()) > 0) {
+        	throw new BadRequestException("Session times cannot extend past conference times");
+        }
+        
         final Key<Conference> conferenceKey = Key.create(websafeConferenceKey);
-        final long conferenceId = conferenceKey.getId();
         Key<Session> sessionKey = factory().allocateId(conferenceKey, Session.class);
         final long sessionId = sessionKey.getId();
         Session session = ofy().transact(new Work<Session>(){
         	@Override
         	public Session run() {
         		Session session = new Session(sessionId, conferenceKey, sessionForm);
-        		Conference conference = null;
-        		try {
-        			getConference(websafeConferenceKey);
-        		} catch (NotFoundException e) {
-        			return null;
-        		}
+
         		ofy().save().entities(session, conference).now();
         		// todo confirmation email
         		return session;
         	}
         });
         
-        if (session == null) {
-        	throw new NotFoundException("Conference not found");
-        }
-
         return session;
     }
 }

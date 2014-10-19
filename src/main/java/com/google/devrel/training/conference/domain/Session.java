@@ -4,6 +4,8 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.api.server.spi.config.AnnotationBoolean;
+import com.google.api.server.spi.config.ApiResourceProperty;
 import com.google.devrel.training.conference.form.SessionForm;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
@@ -64,7 +66,7 @@ public class Session {
 	private Session() {}
 	
 	public Session(final long id, final Key<Conference> conferenceKey, final SessionForm sessionForm) {
-		// precondition checks?  see Conference.java
+		// TODO precondition checks?  see Conference.java
 		this.id = id;
 		this.conferenceKey = conferenceKey;
 		updateWithSessionForm(sessionForm);
@@ -83,11 +85,40 @@ public class Session {
 	/**
 	 * @return duration of the session in seconds
 	 */
+	@ApiResourceProperty(ignored = AnnotationBoolean.TRUE)
 	public long getDuration() {
 		return (endDate.getTime() - startDate.getTime()) / 1000;
 	}
 	
 	public String getTypeOfSession() {
 		return typeOfSession;
+	}
+	
+	public Long getId() {
+		return id;
+	}
+	
+	public String getName() {
+		return name;
+	}
+	
+	public Date getStartDate() {
+		return startDate;
+	}
+	
+	public Date getEndDate() {
+		return endDate;
+	}
+	
+	public Set<String> getSpeakers() {
+		return speakers;
+	}
+	
+	public String getLocation() {
+		return location;
+	}
+	
+	public Set<String> getHighlights() {
+		return highlights;
 	}
 }
