@@ -103,11 +103,6 @@ public class Conference {
     private int seatsAvailable;
     
     /**
-     * List of keys for all sessions in this conference
-     */
-    private List<String> sessionKeysInConference = new ArrayList<>(0);
-
-    /**
      * Just making the default constructor private.
      */
     private Conference() {}
@@ -201,14 +196,6 @@ public class Conference {
         return seatsAvailable;
     }
     
-    public List<String> getSessionKeysInConference() {
-    	return ImmutableList.copyOf(sessionKeysInConference);
-    }
-    
-    public void addToSessionKeysInConference(String sessionKey) {
-    	sessionKeysInConference.add(sessionKey);
-    }
-
     /**
      * Updates the Conference with ConferenceForm.
      * This method is used upon object creation as well as updating existing Conferences.

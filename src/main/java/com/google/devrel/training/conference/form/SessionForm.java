@@ -38,9 +38,9 @@ public class SessionForm {
 	/**
 	 * The location of the session
 	 */
-	// TODO this should probably default to the location of the conference
 	private String location;
 	
+	@SuppressWarnings("unused")
 	private SessionForm() {}
 	
 	public SessionForm(

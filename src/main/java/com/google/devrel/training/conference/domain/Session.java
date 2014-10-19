@@ -6,6 +6,7 @@ import java.util.Set;
 
 import com.google.api.server.spi.config.AnnotationBoolean;
 import com.google.api.server.spi.config.ApiResourceProperty;
+import com.google.appengine.repackaged.com.google.api.client.util.Preconditions;
 import com.google.devrel.training.conference.form.SessionForm;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
@@ -66,10 +67,16 @@ public class Session {
 	 */
 	private Set<String> highlights;
 	
+	@SuppressWarnings("unused")
 	private Session() {}
 	
 	public Session(final long id, final Key<Conference> conferenceKey, final SessionForm sessionForm) {
 		// TODO precondition checks?  see Conference.java
+		Preconditions.checkNotNull(sessionForm.getStartDate(), "Start date is required");
+		Preconditions.checkNotNull(sessionForm.getEndDate(), "End date is required");
+		Preconditions.checkArgument(
+				sessionForm.getStartDate().compareTo(sessionForm.getEndDate()) <= 0, 
+				"Session start date must be earlier than session end date");
 		this.id = id;
 		this.conferenceKey = conferenceKey;
 		updateWithSessionForm(sessionForm);

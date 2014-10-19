@@ -13,7 +13,6 @@ import javax.inject.Named;
 import com.google.api.server.spi.config.Api;
 import com.google.api.server.spi.config.ApiMethod;
 import com.google.api.server.spi.config.ApiMethod.HttpMethod;
-import com.google.api.server.spi.response.BadRequestException;
 import com.google.api.server.spi.response.ConflictException;
 import com.google.api.server.spi.response.ForbiddenException;
 import com.google.api.server.spi.response.NotFoundException;
@@ -147,7 +146,8 @@ public class ConferenceApi {
         private TxResult(Throwable exception) {
             if (exception instanceof NotFoundException ||
                     exception instanceof ForbiddenException ||
-                    exception instanceof ConflictException) {
+                    exception instanceof ConflictException ||
+                    exception instanceof IllegalArgumentException) {
                 this.exception = exception;
             } else {
                 throw new IllegalArgumentException("Exception not supported.");
@@ -530,6 +530,16 @@ public class ConferenceApi {
         return new WrappedBoolean(result.getResult());
     }
     
+    /**
+     * Get all sessions in a conference
+     * 
+     * @param websafeConferenceKey The key associated with the conference
+     * 
+     * @return A collection of Sessions in a Conference.  The collection will be empty if there are
+     * 		   no sessions in the conference
+     * 
+     * @throws NotFoundException If no conference exists with the given websafeConferenceKey
+     */
     @ApiMethod(
             name = "getConferenceSessions",
             path = "getConferenceSessions",
@@ -545,6 +555,16 @@ public class ConferenceApi {
     			           .list();
     }
     
+    /**
+     * Get all sessions in a given conference, filtered by type
+     * 
+     * @param websafeConferenceKey The key associated with the conference
+     * @param typeOfSession        The type to filter sessions by
+     * 
+     * @return A list of sessions, filtered by typeOfSession, and ordered by session start time
+     * 
+     * @throws NotFoundException If no conference exists with the given websafeConferenceKey
+     */
     @ApiMethod(
     		name = "getConferenceSessionsByType",
     		path = "getConferenceSessionsByType",
@@ -563,6 +583,13 @@ public class ConferenceApi {
        	                   .list();
     }
     
+    /**
+     * Get all sessions, filterd by speaker, across all conferences
+     * 
+     * @param speaker The name of the speaker
+     * 
+     * @return A list of sessions by the given speaker, across all conferences
+     */
     @ApiMethod(
     		name = "getSessionsBySpeaker",
     		path = "getSessionsBySpeaker",
@@ -572,44 +599,78 @@ public class ConferenceApi {
     	return ofy().load().type(Session.class).filter("speakers =", speaker).list();
     }
     
+    /**
+     * Creates a session within a conference
+     * 
+     * @param user 					The user who is creating the session, null if the user is not 
+     * 								authenticated
+     * @param sessionForm 			Form containing details about the session
+     * @param websafeConferenceKey  The key associated with the conference which will contain the
+     *                              new session
+     *                             
+     * @return The created Session object
+     * 
+     * @throws UnauthorizedException    If the user is not authenticated
+     * @throws NotFoundException        If a conference with the given key does not exist
+     * @throws IllegalArgumentException If start date is later than end date
+     * @throws ConflictException		If start date is prior to conference start date or end date
+     * 									is after conference end date
+     */
     @ApiMethod(
     		name = "createSession",
     		path = "session",
     		httpMethod = HttpMethod.PUT
     )
-    public Session createSession(User user, final SessionForm sessionForm, 
-    		@Named("websafeConferenceKey") final String websafeConferenceKey) 
-    		throws UnauthorizedException, NotFoundException, BadRequestException {
+    public Session createSession(
+    			User user, 
+    			final SessionForm sessionForm, 
+    			@Named("websafeConferenceKey") final String websafeConferenceKey) 
+    		throws UnauthorizedException, NotFoundException, IllegalArgumentException,
+    		       ForbiddenException, ConflictException {
         if (user == null) {
             throw new UnauthorizedException("Authorization required");
         }   	
         
-        // ensure that session start time is less than end time
-        if (sessionForm.getStartDate().compareTo(sessionForm.getEndDate()) > 0) {
-        	throw new BadRequestException("Session start time must be before its end time");
-        }
-
-        // get the conference and check that the session is in fact contained with in it
-        final Conference conference = getConference(websafeConferenceKey);
-        if (sessionForm.getStartDate().compareTo(conference.getStartDate()) < 0 ||
-            sessionForm.getEndDate().compareTo(conference.getEndDate()) > 0) {
-        	throw new BadRequestException("Session times cannot extend past conference times");
-        }
-        
         final Key<Conference> conferenceKey = Key.create(websafeConferenceKey);
         Key<Session> sessionKey = factory().allocateId(conferenceKey, Session.class);
         final long sessionId = sessionKey.getId();
-        Session session = ofy().transact(new Work<Session>(){
+
+        TxResult<Session> session = ofy().transact(new Work<TxResult<Session>>(){
         	@Override
-        	public Session run() {
-        		Session session = new Session(sessionId, conferenceKey, sessionForm);
+        	public TxResult<Session> run() {
+        		// try to get the conference.  if there's an error, wrap the exception in TxResult
+        		Conference conference = null;
+        		try {
+        			conference = getConference(websafeConferenceKey);
+        		} catch (NotFoundException e) {
+        			return new TxResult<>(e);
+        		}
+
+        		// try to create the session.  becasue Session constructor can throw an
+        		// IllegalArgumentException (due to Preconditions checks), we should catch that
+        		// exception here and wrap it in TxResult, like all the other exceptions
+        		Session session = null;
+        		try {
+        			session = new Session(sessionId, conferenceKey, sessionForm);
+        		} catch (IllegalArgumentException e) {
+        			return new TxResult<>(e);
+        		}
+        		
+        		// return a ConflictException if the start/end times of the session conflict with
+        		// the start/end times of the conference - meaning that either the session start
+        		// is before conference start or session end is after conference end
+        		if (session.getStartDate().compareTo(conference.getStartDate()) < 0 ||
+        		    session.getEndDate().compareTo(conference.getEndDate()) > 0) {
+        			return new TxResult<>(
+        				new ConflictException("Session times cannot extend past conference times"));
+        		}
 
         		ofy().save().entities(session, conference).now();
         		// todo confirmation email
-        		return session;
+        		return new TxResult<>(session);
         	}
         });
         
-        return session;
+        return session.getResult();
     }
 }
