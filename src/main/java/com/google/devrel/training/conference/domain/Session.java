@@ -44,7 +44,6 @@ public class Session {
 	/**
 	 * Format of the session (workshop, lecture, etc.)
 	 */
-	// TODO immutable list of possible formats
 	@Index
 	private String typeOfSession;
 	
@@ -55,7 +54,7 @@ public class Session {
 	 * List of speakers for the session
 	 */
 	@Index
-	private Set<String> speakers = new HashSet<>();
+	private Set<String> speakerKeys = new HashSet<>();
 	
 	/**
 	 * Location of the session
@@ -87,7 +86,7 @@ public class Session {
 		startDate = sessionForm.getStartDate();
 		endDate = sessionForm.getEndDate();
 		typeOfSession = sessionForm.getTypeOfSession();
-		speakers = sessionForm.getSpeakers();
+		speakerKeys = sessionForm.getSpeakerKeys();
 		location = sessionForm.getLocation();
 		highlights = sessionForm.getHighlights();
 	}
@@ -121,7 +120,7 @@ public class Session {
 	}
 	
 	public Set<String> getSpeakers() {
-		return speakers;
+		return speakerKeys;
 	}
 	
 	public String getLocation() {

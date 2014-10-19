@@ -10,3 +10,13 @@ A Session object contain the following properties:
 * `Set<String> speakers`: These are all the speakers for a session.  Using a collection here becasue there could be more than one speaker.  Furthermore, I'm using a set to make sure a speaker is not listed twice (though there is an edge-case issue here where two speakers can have the same name.  In that case, only one name will be listed in the speakers set)
 * `Set<String> highlights`: I'm not sure what this is.  I figure the highlights can be listed as a set of strings, for example ["we learned how to write appengine api methods", "we learned how to properly configure datastore indexes"]
 
+##Speaker
+I chose to make speaker a full-fledged entity stored in datastore.  Some benefits of doing this are:
+* More information for a parituclar speaker - this might help users decide whether or not they want to attend a session
+* The speaker object contains expertise, so theoretically users can work backwards and find speakers they like based on topics they're interested in, which might ultimlately lead to them registering for a particular conference based on the fact it contains a session by their speaker
+* Users won't have to enter the Speaker's information more than once
+
+I didn't build out the Speaker entity as much as Conference and Session are built out.  I just did enough so that we could play with the conference central api.  Currently you can:
+* Create a speaker.  You have to be authenticated to do this
+* Query for speakers.  If you specify no query parameters, all speakers are returned.   Yo could optinally specify email and/or name.  Email is prioritized as it is the Speaker's key in datastore.  If email is not specified but name is, we attempt to find the speaker based on the given name.
+* Query for speakers based on websafe key.  If you happen to have it, there's a function for this as well

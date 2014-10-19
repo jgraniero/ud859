@@ -4,6 +4,7 @@ import static com.google.devrel.training.conference.service.OfyService.factory;
 import static com.google.devrel.training.conference.service.OfyService.ofy;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Logger;
@@ -29,14 +30,18 @@ import com.google.devrel.training.conference.domain.AppEngineUser;
 import com.google.devrel.training.conference.domain.Conference;
 import com.google.devrel.training.conference.domain.Profile;
 import com.google.devrel.training.conference.domain.Session;
+import com.google.devrel.training.conference.domain.Speaker;
 import com.google.devrel.training.conference.form.ConferenceForm;
 import com.google.devrel.training.conference.form.ConferenceQueryForm;
 import com.google.devrel.training.conference.form.ProfileForm;
 import com.google.devrel.training.conference.form.ProfileForm.TeeShirtSize;
 import com.google.devrel.training.conference.form.SessionForm;
+import com.google.devrel.training.conference.form.SpeakerForm;
+import com.google.devrel.training.conference.form.SpeakerQueryForm;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.Work;
+import com.googlecode.objectify.cmd.Query;
 
 /**
  * Defines conference APIs.
@@ -591,12 +596,97 @@ public class ConferenceApi {
      * @return A list of sessions by the given speaker, across all conferences
      */
     @ApiMethod(
+    		name = "getSessionsBySpeakerKey",
+    		path = "getSessionsBySpeakerKey",
+    		httpMethod = HttpMethod.GET
+    )
+    public List<Session> getSessionsBySpeakerKey(@Named("websafeSpeakerKey") String websafeSpeakerKey) {
+    	return ofy().load().type(Session.class).filter("speakerKeys =", websafeSpeakerKey).list();
+    }
+    
+    /**
+     * Returns sessions across all conferences for a given speaker
+     * 
+     * @param speaker The name of the speaker
+     * @return List of sessions for the given speaker
+     * @throws NotFoundException If the speaker could not be found in the database
+     */
+    @ApiMethod(
     		name = "getSessionsBySpeaker",
     		path = "getSessionsBySpeaker",
     		httpMethod = HttpMethod.GET
     )
-    public List<Session> getSessionsBySpeaker(@Named("speaker") String speaker) {
-    	return ofy().load().type(Session.class).filter("speakers =", speaker).list();
+    public List<Session> getSessionsBySpeaker(@Named("speaker") String speaker) 
+    	throws NotFoundException {
+    	
+    	// first, get the speaker
+    	List<Speaker> res = ofy().load().type(Speaker.class).filter("name =", speaker).list();
+    	
+    	if (res == null || res.isEmpty()) {
+    		throw new NotFoundException("Could not find speaker");
+    	}
+    	
+    	Key<Speaker> speakerKey = Key.create(Speaker.class, res.get(0).getEmail());
+    	return ofy().load().type(Session.class).filter("speakerKeys =", speakerKey).list();
+    }
+    
+    /**
+     * Create a speaker and save to datastore
+     * 
+     * @param user The user who is creating the speaker, null if not authenticated
+     * @param speakerForm Contains all of the properties for the new speaker
+     * @return The speaker, if created successfully 
+     * 
+     * @throws UnauthorizedException If user is not authenticated
+     * @throws Null
+     */
+    @ApiMethod(
+    		name = "createSpeaker",
+    		path = "speaker",
+    		httpMethod = HttpMethod.PUT
+    )
+    public Speaker createSpeaker(User user, SpeakerForm speakerForm) 
+    		throws UnauthorizedException {
+    	if (user == null) {
+    		throw new UnauthorizedException("Authorization required");
+    	}
+    	
+    	Speaker speaker = new Speaker(speakerForm);
+    	ofy().save().entity(speaker).now();
+
+    	return speaker;
+    }
+    
+    @ApiMethod(
+    		name = "querySpeakers",
+    		path = "querySpeakers",
+    		httpMethod = HttpMethod.POST
+    )
+    public List<Speaker> querySpeakers(SpeakerQueryForm speakerQueryForm) {
+    	// if email is specified, that's the best case since it's the id for a speaker
+    	System.out.println("email is " + speakerQueryForm.getEmail());
+    	if (speakerQueryForm.getEmail() != null) {
+    		System.out.println("email is not null!");
+    		Key<Speaker> speakerKey = Key.create(Speaker.class, speakerQueryForm.getEmail());
+    		Speaker res = ofy().load().key(speakerKey).now();
+    		
+    		if (res == null) {
+    			return new ArrayList<Speaker>();
+    		}
+    		
+    		return Arrays.asList(res);
+    	}
+    	
+    	System.out.println("name is " + speakerQueryForm.getName());
+    	if (speakerQueryForm.getName() != null) {
+    		System.out.println("name is not null!");
+    		// try matching on the name
+    		return ofy().load().type(Speaker.class).filter("name =", speakerQueryForm.getName()).list();
+    	}
+    	
+    	System.out.println("fell through everything!!");
+    	// no filters specified so just return all speakers
+    	return ofy().load().type(Speaker.class).list();
     }
     
     /**
