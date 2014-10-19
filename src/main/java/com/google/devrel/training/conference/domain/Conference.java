@@ -2,6 +2,11 @@ package com.google.devrel.training.conference.domain;
 
 import static com.google.devrel.training.conference.service.OfyService.ofy;
 
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
 import com.google.api.server.spi.config.AnnotationBoolean;
 import com.google.api.server.spi.config.ApiResourceProperty;
 import com.google.common.base.Preconditions;
@@ -12,10 +17,6 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.annotation.Parent;
-
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 
 /**
  * Conference class stores conference information.
@@ -100,7 +101,7 @@ public class Conference {
      */
     @Index
     private int seatsAvailable;
-
+    
     /**
      * Just making the default constructor private.
      */
@@ -194,7 +195,7 @@ public class Conference {
     public int getSeatsAvailable() {
         return seatsAvailable;
     }
-
+    
     /**
      * Updates the Conference with ConferenceForm.
      * This method is used upon object creation as well as updating existing Conferences.
