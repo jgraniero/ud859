@@ -53,6 +53,7 @@ public class Session {
 	/**
 	 * List of speakers for the session
 	 */
+	@Index
 	private Set<String> speakers = new HashSet<>();
 	
 	/**

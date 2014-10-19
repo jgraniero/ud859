@@ -569,7 +569,7 @@ public class ConferenceApi {
     		httpMethod = HttpMethod.GET
     )
     public List<Session> getSessionsBySpeaker(@Named("speaker") String speaker) {
-    	return ofy().load().type(Session.class).filter("speaker =", speaker).list();
+    	return ofy().load().type(Session.class).filter("speakers =", speaker).list();
     }
     
     @ApiMethod(
