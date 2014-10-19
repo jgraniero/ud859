@@ -39,6 +39,11 @@ public class Profile {
      * Keys of the conferences that this user registers to attend.
      */
     private List<String> conferenceKeysToAttend = new ArrayList<>(0);
+    
+    /**
+     * Keys of sessions in the user's wishlist
+     */
+    private List<String> sessionKeysInWishlist = new ArrayList<>(0);
 
     /**
      * Just making the default constructor private.
@@ -98,6 +103,10 @@ public class Profile {
     public List<String> getConferenceKeysToAttend() {
         return ImmutableList.copyOf(conferenceKeysToAttend);
     }
+    
+    public List<String> getSessionKeysInWishlist() {
+    	return ImmutableList.copyOf(sessionKeysInWishlist);
+    }
 
     /**
      * Update the Profile with the given displayName and teeShirtSize
@@ -124,6 +133,15 @@ public class Profile {
     public void addToConferenceKeysToAttend(String conferenceKey) {
         conferenceKeysToAttend.add(conferenceKey);
     }
+    
+    /**
+     * Adds a session to the user's wishlist
+     * 
+     * @param sessionKey The websafe String key of the session to be added to the wishlist
+     */
+    public void addToSessionKeysInWishlist(String sessionKey) {
+    	sessionKeysInWishlist.add(sessionKey);
+    }
 
     /**
      * Remove the conferenceId from conferenceIdsToAttend.
@@ -136,5 +154,18 @@ public class Profile {
         } else {
             throw new IllegalArgumentException("Invalid conferenceKey: " + conferenceKey);
         }
+    }
+    
+    /**
+     * Remove the session key from the user's wishlist
+     * 
+     * @param sessionKey The key of the session to be removed from the wishlist
+     */
+    public void removeFromWishlist(String sessionKey) {
+    	if (sessionKeysInWishlist.contains(sessionKey)) {
+    		sessionKeysInWishlist.remove(sessionKey);
+    	} else {
+    		throw new IllegalArgumentException("Invalid sessionKey: " + sessionKey);
+    	}
     }
 }

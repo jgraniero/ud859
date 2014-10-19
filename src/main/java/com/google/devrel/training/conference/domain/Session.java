@@ -9,6 +9,7 @@ import com.google.api.server.spi.config.ApiResourceProperty;
 import com.google.appengine.repackaged.com.google.api.client.util.Preconditions;
 import com.google.devrel.training.conference.form.SessionForm;
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
@@ -18,6 +19,7 @@ import com.googlecode.objectify.annotation.Parent;
  * Stores a conference's session information
  */
 @Entity
+@Cache
 public class Session {
 
 	/**
@@ -90,6 +92,15 @@ public class Session {
 		speakers = sessionForm.getSpeakers();
 		location = sessionForm.getLocation();
 		highlights = sessionForm.getHighlights();
+	}
+	
+	/**
+	 * The websafe session key
+	 * 
+	 * @return
+	 */
+	public String getWebsafeKey() {
+		return Key.create(conferenceKey, Session.class, id).getString();
 	}
 
 	/**
