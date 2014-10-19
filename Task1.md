@@ -1,5 +1,3 @@
-#Design Choices
-
 ##Session
 A Session object contain the following properties:
 * `Long id`: There is no Session field which is suitable as an ID, so I've chosen to automatically allocate an ID for sessions

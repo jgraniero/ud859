@@ -763,4 +763,141 @@ public class ConferenceApi {
         
         return session.getResult();
     }
+
+    /**
+     * Adds a session to a user's wishlist
+     * 
+     * @param user 				The user, null when not authenticated
+     * @param websafeSessionKey The websafe string key of the session to add to the wishlist
+     * 
+     * @return true if added to wishlist successfully, exception will get thrown otherwise
+     * 
+     * @throws UnauthorizedException If the user is not authenticated
+     * @throws ConflictException 	 If the user already has the session in his wishlist
+     */
+    @ApiMethod(
+            name = "addSessionToWishlist",
+            path = "addSessionToWishlist",
+            httpMethod = HttpMethod.POST
+    )
+    public WrappedBoolean addSessionToWishlist(
+    			final User user,
+            	@Named("websafeSessionKey") final String websafeSessionKey)
+            throws UnauthorizedException, ConflictException, NotFoundException, ForbiddenException {
+        // If not signed in, throw a 401 error.
+        if (user == null) {
+            throw new UnauthorizedException("Authorization required");
+        }
+        
+        // all of the objectify work takes place in a transaction.  this is because we want to verify
+        // that the websafe session key actually maps to an existing session.  if we don't do this
+        // in a transaction, someone else can delete the session while we are adding it to the 
+        // wishlist, leading to inconsistencies
+        TxResult<Boolean> result = ofy().transact(new Work<TxResult<Boolean>>() {
+        	@Override
+        	public TxResult<Boolean> run() {
+        		// get the profile
+        		Profile profile = getProfileFromUser(user, getUserId(user));
+        		
+        		// get the session.  we don't really need it, but we should verify that it actually
+        		// exists.  this is the primary reason for doing all this in a transaction
+        		Key<Session> sessionKey = Key.create(websafeSessionKey);
+        		Session session = ofy().load().key(sessionKey).now();
+        		if (session == null) {
+        			return new TxResult<>(new NotFoundException("Session does not exist"));
+        		}
+        		
+        		if (profile.getSessionKeysInWishlist().contains(websafeSessionKey)) {
+        			return new TxResult<>(
+        				new ConflictException("You have already added this session to your wishlist"));
+        		}
+        		
+        		profile.addToSessionKeysInWishlist(websafeSessionKey);
+        		ofy().save().entity(profile).now();
+        		
+        		return new TxResult<>(true);
+        	}
+        });
+        
+        return new WrappedBoolean(result.getResult());
+    }
+    
+    /**
+     * Gets all sessions in a user's wishlist
+     * 
+     * @param user The user whose wishlist we want.  Null if not signed in
+     * 
+     * @return The wishlist of sessions
+     * 
+     * @throws UnauthorizedException If the user is not authenticated
+     * @throws NotFoundException 	 If the user could not be found
+     */
+    @ApiMethod(
+    		name = "getSessionsInWishlist",
+    		path = "getSessionsInWishlist",
+    		httpMethod = HttpMethod.GET
+    )
+    public Collection<Session> getSessionsInWishlist(User user) 
+    		throws UnauthorizedException, NotFoundException {
+        // If not signed in, throw a 401 error.
+        if (user == null) {
+            throw new UnauthorizedException("Authorization required");
+        }
+
+        Profile profile = ofy().load().key(Key.create(Profile.class, getUserId(user))).now();
+        if (profile == null) {
+            throw new NotFoundException("Profile doesn't exist.");
+        }
+
+        List<String> websafeSessionKeysInWishlist = profile.getSessionKeysInWishlist();
+        for (String key : websafeSessionKeysInWishlist) {
+        	System.out.println("found " + key + "!!");
+        }
+        List<Key<Session>> sessionKeysInWishlist = new ArrayList<>();
+        for (String keyString : websafeSessionKeysInWishlist) {
+            sessionKeysInWishlist.add(Key.<Session>create(keyString));
+        }
+
+        return ofy().load().keys(sessionKeysInWishlist).values();
+    }
+    
+    /**
+     * Removes a session from a user's wishlist 
+     * 
+     * @param user 				The user, null if not authenticated
+     * @param websafeSessionKey The string key of the session
+     * 
+     * @return true if session was removed from wishlist, false if session was not in wishlist to
+     *         begin with
+     *         
+     * @throws UnauthorizedException If the user is not logged in
+     * @throws NotFoundException     If the user's profile could not be found in the database
+     */
+    @ApiMethod(
+    		name = "removeSessionFromWishlist",
+    		path = "removeSessionFromWishlist",
+    		httpMethod = HttpMethod.POST
+    )
+    public WrappedBoolean removeSessionFromWishlist(
+    			User user,
+    			@Named("websafeSessionKey") String websafeSessionKey) 
+    		throws UnauthorizedException, NotFoundException {
+    	if (user == null) {
+    		throw new UnauthorizedException("Authorization required");
+    	}
+    	
+    	Profile profile = ofy().load().key(Key.create(Profile.class, getUserId(user))).now();
+    	if (profile == null) {
+    		throw new NotFoundException("Profile doesn't exist.");
+    	}
+    	
+    	List<String> websafeKeysInWishlist = profile.getSessionKeysInWishlist();
+    	if (websafeKeysInWishlist.contains(websafeSessionKey)) {
+    		profile.removeFromWishlist(websafeSessionKey);
+    		ofy().save().entities(profile).now();
+    		return new WrappedBoolean(true);
+    	}
+    	
+    	return new WrappedBoolean(false);
+    }
 }
