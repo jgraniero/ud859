@@ -5,11 +5,15 @@ import static com.google.devrel.training.conference.service.OfyService.ofy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
 
 import javax.inject.Named;
+
+import org.quartz.xml.JobSchedulingDataProcessor.CalendarRuleSet;
 
 import com.google.api.server.spi.config.Api;
 import com.google.api.server.spi.config.ApiMethod;
@@ -41,7 +45,6 @@ import com.google.devrel.training.conference.form.SpeakerQueryForm;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.Work;
-import com.googlecode.objectify.cmd.Query;
 
 /**
  * Defines conference APIs.
@@ -899,5 +902,88 @@ public class ConferenceApi {
     	}
     	
     	return new WrappedBoolean(false);
+    }
+    
+    /**
+     * Finds all sessions which contain a speaker who is an expert in appengine
+     * 
+     * This could arguably be done in a transaction since we are executing two queries, but since
+     * they are only reads I'm opting not to do it here and to let the user get slightly incorrect
+     * results in the edge case where changes are made to the sessions/speakers in question between
+     * the completion of the two queries here.
+     * 
+     * @return
+     */
+    public List<Session> additionalQuery1() {
+    	
+    	// first get all speakers who are experts in appengine
+    	List<Speaker> appengineExperts = 
+    		ofy().load().type(Speaker.class).filter("expertise =", "appengine").list();
+    	
+    	// return an empty list of sessions if there are no speakers who are experts in appengine.
+    	// no point in actually running the second query
+    	if (appengineExperts.isEmpty()) {
+    		return new ArrayList<Session>();
+    	}
+    	
+    	List<String> speakerKeys = new ArrayList<>();
+    	for (Speaker speaker : appengineExperts) {
+    		speakerKeys.add(speaker.getWebsafeKey());
+    	}
+    	
+    	return ofy().load().type(Session.class).filter("speakerKeys in", speakerKeys).list();
+    }
+    
+    /**
+     * Finds all sessions which are starting in the next week, sorted by start time
+     * 
+     * This could be for a view on the UI where the upcoming conferences are displayed.
+     * 
+     * @return
+     */
+    public List<Conference> additionalQuery2() {
+    	Calendar cal = Calendar.getInstance();
+    	Date today = cal.getTime();
+    	
+    	cal.add(Calendar.DAY_OF_YEAR, 6);
+    	Date sixDaysFromNow = cal.getTime();
+    	
+    	return ofy().load().type(Conference.class)
+    	                   .filter("startDate >=", today)
+    	                   .filter("endDate <=", sixDaysFromNow)
+    	                   .list();
+    }
+
+    /**
+     * The query problem from task 3
+     * 
+     * The user doesn't like workshops, so we have to use an inequality there.  There are many 
+     * possible types of conferences that list might always be changing.  If the list isn't well
+     * maintained, it might be difficult to get a complete list of conference types which are not 
+     * workshops.
+     * 
+     * On the other hand, time isn't changing.  We can write this once and forget about it.  If the
+     * user doesn't want to attend a session that ends at 7pm or later, we know that the conference
+     * must end anytime from hour 1 through hour 18.  Thus, we can swap our endTime < 19 for
+     * endHour in (1, 2, ..., 18).  We are then free to use our only inequality on the session type
+     * 
+     * This solution required the addition of endHour to the Session class.  For completeness, I also
+     * added a startHour field, but I've only indexed endHour as it was necessary for this specific
+     * example
+     * 
+     * @return
+     */
+    public List<Session> queryProblem() {
+    	List<Integer> endHours = new ArrayList<>();
+    	// 7pm is 19, so valid conferences are those that end before 7pm, which in 24 hour format
+    	// is hours 1 through 18
+    	for (int i = 1; i <= 18; i++) {
+    		endHours.add(i);
+    	}
+    	
+    	return ofy().load().type(Session.class)
+    	            .filter("typeOfSession !=", "workshop")
+    	            .filter("endHour in", endHours)
+    	            .list();
     }
 }
