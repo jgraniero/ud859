@@ -592,7 +592,7 @@ public class ConferenceApi {
     }
     
     /**
-     * Get all sessions, filterd by speaker, across all conferences
+     * Get all sessions, filtered by speaker, across all conferences
      * 
      * @param speaker The name of the speaker
      * 
@@ -604,7 +604,7 @@ public class ConferenceApi {
     		httpMethod = HttpMethod.GET
     )
     public List<Session> getSessionsBySpeakerKey(@Named("websafeSpeakerKey") String websafeSpeakerKey) {
-    	return ofy().load().type(Session.class).filter("speakerKeys =", websafeSpeakerKey).list();
+    	return ofy().load().type(Session.class).filter("speakerKey =", websafeSpeakerKey).list();
     }
     
     /**
@@ -629,8 +629,9 @@ public class ConferenceApi {
     		throw new NotFoundException("Could not find speaker");
     	}
     	
-    	Key<Speaker> speakerKey = Key.create(Speaker.class, res.get(0).getEmail());
-    	return ofy().load().type(Session.class).filter("speakerKeys =", speakerKey).list();
+    	return ofy().load().type(Session.class)
+    			            .filter("speakerKey =", res.get(0).getWebsafeKey())
+    			            .list();
     }
     
     /**
@@ -853,9 +854,6 @@ public class ConferenceApi {
         }
 
         List<String> websafeSessionKeysInWishlist = profile.getSessionKeysInWishlist();
-        for (String key : websafeSessionKeysInWishlist) {
-        	System.out.println("found " + key + "!!");
-        }
         List<Key<Session>> sessionKeysInWishlist = new ArrayList<>();
         for (String keyString : websafeSessionKeysInWishlist) {
             sessionKeysInWishlist.add(Key.<Session>create(keyString));
@@ -950,7 +948,7 @@ public class ConferenceApi {
     	
     	return ofy().load().type(Conference.class)
     	                   .filter("startDate >=", today)
-    	                   .filter("endDate <=", sixDaysFromNow)
+    	                   .filter("startDate <=", sixDaysFromNow)
     	                   .list();
     }
 

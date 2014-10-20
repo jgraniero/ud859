@@ -18,7 +18,7 @@ public class SessionForm {
 	/**
 	 * Session speaker
 	 */
-	private Set<String> speakerKeys;
+	private String speakerKey;
 	
 	/**
 	 * The type of the session (workshop, q&a, etc.)
@@ -46,13 +46,13 @@ public class SessionForm {
 	public SessionForm(
 			String name, 
 			Set<String> highlights, 
-			Set<String> speakerKeys, 
+			String speakerKey, 
 			String typeOfSession, 
 			Date startDate,
 			Date endDate) {
 		this.name = name;
 		this.highlights = highlights;
-		this.speakerKeys = speakerKeys;
+		this.speakerKey = speakerKey;
 		this.typeOfSession = typeOfSession;
 		this.startDate = startDate;
 		this.endDate = endDate;
@@ -66,8 +66,8 @@ public class SessionForm {
 		return highlights;
 	}
 	
-	public Set<String> getSpeakerKeys() {
-		return speakerKeys;
+	public String getSpeakerKey() {
+		return speakerKey;
 	}
 	
 	public String getTypeOfSession() {
