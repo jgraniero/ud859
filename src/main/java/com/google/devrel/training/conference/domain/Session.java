@@ -1,5 +1,6 @@
 package com.google.devrel.training.conference.domain;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -37,6 +38,17 @@ public class Session {
 	 * The date/time the session starts
 	 */
 	private Date startDate;
+	
+	/**
+	 * The hour of the day when the conference starts.  0 - 23
+	 */
+	private int startHour;
+	
+	/**
+	 * The hour of the day when the conference ends.  0 - 23
+	 */
+	@Index
+	private int endHour;
 	
 	/**
 	 * The date/time the session ends
@@ -91,6 +103,13 @@ public class Session {
 		speakerKeys = sessionForm.getSpeakerKeys();
 		location = sessionForm.getLocation();
 		highlights = sessionForm.getHighlights();
+		
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(startDate);
+		startHour = cal.get(Calendar.HOUR_OF_DAY);
+		
+		cal.setTime(endDate);
+		endHour = cal.get(Calendar.HOUR_OF_DAY);
 	}
 	
 	/**
@@ -128,6 +147,14 @@ public class Session {
 	
 	public Date getEndDate() {
 		return endDate;
+	}
+	
+	public int getStartHour() {
+		return startHour;
+	}
+	
+	public int getEndHour() {
+		return endHour;
 	}
 	
 	public Set<String> getSpeakers() {
