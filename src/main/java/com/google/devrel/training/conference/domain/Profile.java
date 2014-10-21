@@ -41,7 +41,7 @@ public class Profile {
     private List<String> conferenceKeysToAttend = new ArrayList<>(0);
     
     /**
-     * Keys of sessions in the user's wishlist
+     * websafe keys of sessions in the user's wishlist
      */
     private List<String> sessionKeysInWishlist = new ArrayList<>(0);
 

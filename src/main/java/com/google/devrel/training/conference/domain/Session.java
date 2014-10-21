@@ -2,7 +2,6 @@ package com.google.devrel.training.conference.domain;
 
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Set;
 
 import com.google.api.server.spi.config.AnnotationBoolean;
@@ -36,7 +35,11 @@ public class Session {
 	
 	/**
 	 * The date/time the session starts
+	 * 
+	 * indexed so that we can sort by start date.  probably unnecessary to index end date as that's
+	 * not a very common query
 	 */
+	@Index
 	private Date startDate;
 	
 	/**
@@ -65,10 +68,10 @@ public class Session {
 	private Key<Conference> conferenceKey;
 	
 	/**
-	 * List of speakers for the session
+	 * websafe key of the speaker at this session
 	 */
 	@Index
-	private Set<String> speakerKeys = new HashSet<>();
+	private String speakerKey;
 	
 	/**
 	 * Location of the session
@@ -84,7 +87,9 @@ public class Session {
 	private Session() {}
 	
 	public Session(final long id, final Key<Conference> conferenceKey, final SessionForm sessionForm) {
-		// TODO precondition checks?  see Conference.java
+		// a few checks:
+		//	- startDate and endDate must be specified
+		//  - startDate must be chronologically earlier than endDate
 		Preconditions.checkNotNull(sessionForm.getStartDate(), "Start date is required");
 		Preconditions.checkNotNull(sessionForm.getEndDate(), "End date is required");
 		Preconditions.checkArgument(
@@ -100,10 +105,11 @@ public class Session {
 		startDate = sessionForm.getStartDate();
 		endDate = sessionForm.getEndDate();
 		typeOfSession = sessionForm.getTypeOfSession();
-		speakerKeys = sessionForm.getSpeakerKeys();
+		speakerKey = sessionForm.getSpeakerKey();
 		location = sessionForm.getLocation();
 		highlights = sessionForm.getHighlights();
 		
+		// extract the start and end hours
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(startDate);
 		startHour = cal.get(Calendar.HOUR_OF_DAY);
@@ -122,7 +128,10 @@ public class Session {
 	}
 
 	/**
-	 * @return duration of the session in seconds
+	 * returns the duration of the session in seconds.  
+	 * there's really no reason to store this in datastore based on our use case.  if we wanted to
+	 * query by duration, then we could include it in the entity, otherwise computing it on the fly
+	 * when we need it is good enough.
 	 */
 	@ApiResourceProperty(ignored = AnnotationBoolean.TRUE)
 	public long getDuration() {
@@ -157,8 +166,8 @@ public class Session {
 		return endHour;
 	}
 	
-	public Set<String> getSpeakers() {
-		return speakerKeys;
+	public String getSpeakerKey() {
+		return speakerKey;
 	}
 	
 	public String getLocation() {

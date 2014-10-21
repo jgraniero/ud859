@@ -13,8 +13,6 @@ import java.util.logging.Logger;
 
 import javax.inject.Named;
 
-import org.quartz.xml.JobSchedulingDataProcessor.CalendarRuleSet;
-
 import com.google.api.server.spi.config.Api;
 import com.google.api.server.spi.config.ApiMethod;
 import com.google.api.server.spi.config.ApiMethod.HttpMethod;
@@ -32,6 +30,7 @@ import com.google.devrel.training.conference.Constants;
 import com.google.devrel.training.conference.domain.Announcement;
 import com.google.devrel.training.conference.domain.AppEngineUser;
 import com.google.devrel.training.conference.domain.Conference;
+import com.google.devrel.training.conference.domain.FeaturedSpeaker;
 import com.google.devrel.training.conference.domain.Profile;
 import com.google.devrel.training.conference.domain.Session;
 import com.google.devrel.training.conference.domain.Speaker;
@@ -49,7 +48,6 @@ import com.googlecode.objectify.Work;
 /**
  * Defines conference APIs.
  */
-
 @Api(
         name = "conference",
         version = "v1",
@@ -555,7 +553,7 @@ public class ConferenceApi {
     )
     public Collection<Session> getConferenceSessions(
     		@Named("websafeConferenceKey") final String websafeConferenceKey) 
-    	   throws NotFoundException {
+    	throws NotFoundException {
 
     	Key<Conference> conferenceKey = Key.create(websafeConferenceKey);
     	return ofy().load().type(Session.class)
@@ -592,7 +590,7 @@ public class ConferenceApi {
     }
     
     /**
-     * Get all sessions, filterd by speaker, across all conferences
+     * Get all sessions, filtered by speaker, across all conferences
      * 
      * @param speaker The name of the speaker
      * 
@@ -604,7 +602,7 @@ public class ConferenceApi {
     		httpMethod = HttpMethod.GET
     )
     public List<Session> getSessionsBySpeakerKey(@Named("websafeSpeakerKey") String websafeSpeakerKey) {
-    	return ofy().load().type(Session.class).filter("speakerKeys =", websafeSpeakerKey).list();
+    	return ofy().load().type(Session.class).filter("speakerKey =", websafeSpeakerKey).list();
     }
     
     /**
@@ -629,8 +627,9 @@ public class ConferenceApi {
     		throw new NotFoundException("Could not find speaker");
     	}
     	
-    	Key<Speaker> speakerKey = Key.create(Speaker.class, res.get(0).getEmail());
-    	return ofy().load().type(Session.class).filter("speakerKeys =", speakerKey).list();
+    	return ofy().load().type(Session.class)
+    			            .filter("speakerKey =", res.get(0).getWebsafeKey())
+    			            .list();
     }
     
     /**
@@ -739,7 +738,7 @@ public class ConferenceApi {
         			return new TxResult<>(e);
         		}
 
-        		// try to create the session.  becasue Session constructor can throw an
+        		// try to create the session.  because Session constructor can throw an
         		// IllegalArgumentException (due to Preconditions checks), we should catch that
         		// exception here and wrap it in TxResult, like all the other exceptions
         		Session session = null;
@@ -757,14 +756,73 @@ public class ConferenceApi {
         			return new TxResult<>(
         				new ConflictException("Session times cannot extend past conference times"));
         		}
+        		
+        		// check to see that the speaker actually exists
+        		Speaker speaker = 
+        			ofy().load().key(Key.<Speaker>create(sessionForm.getSpeakerKey())).now();
+        		
+        		if (speaker == null) {
+        			return new TxResult<>(new NotFoundException("Speaker not found"));
+        		}
 
         		ofy().save().entities(session, conference).now();
-        		// todo confirmation email
+        		
+        		// only need to check this if speaker is set
+        		if (sessionForm.getSpeakerKey() != null) {
+        			checkFeaturedSpeaker(conference, speaker);
+        		}
+
         		return new TxResult<>(session);
         	}
         });
         
         return session.getResult();
+    }
+    
+    private void checkFeaturedSpeaker(Conference conference, Speaker speaker) {
+    	// get all sessions in conference by this speaker
+    	Key<Conference> conferenceKey = Key.create(conference.getWebsafeKey());
+    	List<Session> speakerSessionsInConf = 
+    		ofy().load().type(Session.class)
+    	         .ancestor(conferenceKey)
+    	         .filter("speakerKey =", speaker.getWebsafeKey())
+    	         .list();
+    	
+    	if (speakerSessionsInConf.size() < 2) {
+    		return;
+    	}
+    	
+    	// if we reach this part of the code, the speaker should be featured.  get the session names
+    	List<String> sessionNames = new ArrayList<>();
+    	for (Session speakerSession : speakerSessionsInConf) {
+    		sessionNames.add(speakerSession.getName());
+    	}
+    	
+    	// create the featured speaker to store in memcache
+    	FeaturedSpeaker featuredSpeaker = 
+    		new FeaturedSpeaker(speaker.getName(), conference.getName(), sessionNames);
+
+        MemcacheService memcacheService = MemcacheServiceFactory.getMemcacheService();
+        memcacheService.put(Constants.MEMCACHE_FEATURED_SPEAKER_KEY, featuredSpeaker);
+    }
+    
+    /**
+     * 
+     */
+    @ApiMethod(
+    		name = "getFeaturedSpeaker",
+    		path = "getFeaturedSpeaker",
+    		httpMethod = HttpMethod.GET
+    )
+    public FeaturedSpeaker getFeaturedSpeaker() {
+        MemcacheService memcacheService = MemcacheServiceFactory.getMemcacheService();
+        Object message = memcacheService.get(Constants.MEMCACHE_FEATURED_SPEAKER_KEY);
+        if (message != null) {
+        	FeaturedSpeaker speaker = (FeaturedSpeaker) message;
+        	System.out.println("the speaker's name is " + speaker.getName());
+        	return speaker;
+        }
+        return null;
     }
 
     /**
@@ -853,9 +911,6 @@ public class ConferenceApi {
         }
 
         List<String> websafeSessionKeysInWishlist = profile.getSessionKeysInWishlist();
-        for (String key : websafeSessionKeysInWishlist) {
-        	System.out.println("found " + key + "!!");
-        }
         List<Key<Session>> sessionKeysInWishlist = new ArrayList<>();
         for (String keyString : websafeSessionKeysInWishlist) {
             sessionKeysInWishlist.add(Key.<Session>create(keyString));
@@ -931,7 +986,7 @@ public class ConferenceApi {
     		speakerKeys.add(speaker.getWebsafeKey());
     	}
     	
-    	return ofy().load().type(Session.class).filter("speakerKeys in", speakerKeys).list();
+    	return ofy().load().type(Session.class).filter("speakerKey in", speakerKeys).list();
     }
     
     /**
@@ -950,7 +1005,7 @@ public class ConferenceApi {
     	
     	return ofy().load().type(Conference.class)
     	                   .filter("startDate >=", today)
-    	                   .filter("endDate <=", sixDaysFromNow)
+    	                   .filter("startDate <=", sixDaysFromNow)
     	                   .list();
     }
 
