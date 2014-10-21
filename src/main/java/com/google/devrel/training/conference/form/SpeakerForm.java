@@ -2,16 +2,34 @@ package com.google.devrel.training.conference.form;
 
 import java.util.Set;
 
+/**
+ * Object used to model data sent to the API for speaker creation
+ */
 public class SpeakerForm {
 
+	/**
+	 * speaker's email address
+	 */
 	private String email;
 	
+	/**
+	 * speaker's name
+	 */
 	private String name;
 	
+	/**
+	 * speaker's name as it should appear in the web ui
+	 */
 	private String displayName;
 	
+	/**
+	 * areas of expertise for the speaker
+	 */
 	private Set<String> expertise;
 	
+	/**
+	 * "about me" for the speaker
+	 */
 	private String about;
 	
 	private SpeakerForm() {}

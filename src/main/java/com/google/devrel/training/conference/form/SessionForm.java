@@ -3,6 +3,9 @@ package com.google.devrel.training.conference.form;
 import java.util.Date;
 import java.util.Set;
 
+/**
+ * An object representing data sent to the API for session creation
+ */
 public class SessionForm {
 
 	/**
@@ -16,7 +19,7 @@ public class SessionForm {
 	private Set<String> highlights;
 	
 	/**
-	 * Session speaker
+	 * websafe session speaker key
 	 */
 	private String speakerKey;
 	
@@ -26,12 +29,12 @@ public class SessionForm {
 	private String typeOfSession;
 	
 	/**
-	 * The session start date/time
+	 * The session start date/time of the session
 	 */
 	private Date startDate;
 	
 	/**
-	 * The sesseion end date/time
+	 * The sesseion end date/time of the session
 	 */
 	private Date endDate;
 	

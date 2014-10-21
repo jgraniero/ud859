@@ -106,8 +106,4 @@
         <property name="name" direction="asc"/>
     </datastore-index>
     
-    <datastore-index kind="Session" ancestor="false">
-    	<property name="typeOfSession" direction="asc"/>
-    </datastore-index>
-
 </datastore-indexes>

@@ -5,6 +5,7 @@ import java.util.Set;
 import com.google.appengine.repackaged.com.google.api.client.util.Preconditions;
 import com.google.devrel.training.conference.form.SpeakerForm;
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
@@ -14,6 +15,7 @@ import com.googlecode.objectify.annotation.Index;
  *
  */
 @Entity
+@Cache
 public class Speaker {
 
 	/**

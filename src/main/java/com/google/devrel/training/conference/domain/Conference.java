@@ -2,7 +2,6 @@ package com.google.devrel.training.conference.domain;
 
 import static com.google.devrel.training.conference.service.OfyService.ofy;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
