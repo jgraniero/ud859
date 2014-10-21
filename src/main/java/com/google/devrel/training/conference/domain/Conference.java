@@ -74,6 +74,7 @@ public class Conference {
     /**
      * The starting date of this conference.
      */
+    @Index
     private Date startDate;
 
     /**
